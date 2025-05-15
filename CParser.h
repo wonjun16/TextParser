@@ -16,8 +16,10 @@ protected:
 	char* FileBuffer;
 	std::map<const char*, void*> Data;
 
-	bool SkipNoneCommand(void);
+	bool ReadFile(void);
+	void SkipNoneCommand(char**, int);
 	bool GetNextWord(char**, int*);
 	bool GetStringWord(char**, int*);
+	void StoreFile(void);
 };
 
