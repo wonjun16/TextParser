@@ -2,6 +2,16 @@
 #include <iostream>
 #include <map>
 
+struct Value
+{
+	enum class TYPE{INT, STRING} type;
+	union
+	{
+		int i;
+		char* s;
+	};
+};
+
 class CParser
 {
 public:
@@ -9,17 +19,17 @@ public:
 	~CParser();
 
 	bool LoadFile(const char*);
-	bool GetValue(const char*, void*) const;
+	bool GetValue(const char*, Value*) const;
 
 protected:
 	FILE* File;
 	char* FileBuffer;
-	std::map<const char*, void*> Data;
+	std::map<const char*, Value> Data;
 
 	bool ReadFile(void);
 	void SkipNoneCommand(char**, int);
+	bool GetNextWord(char**, char**);
 	bool GetNextWord(char**, int*);
-	bool GetStringWord(char**, int*);
 	void StoreFile(void);
 };
 
