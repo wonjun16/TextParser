@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <map>
+#include <string>
 
 struct Value
 {
@@ -19,17 +20,18 @@ public:
 	~CParser();
 
 	bool LoadFile(const char*);
-	bool GetValue(const char*, Value*) const;
+	bool GetValue(std::string, Value*) const;
 
 protected:
 	FILE* File;
 	char* FileBuffer;
-	std::map<const char*, Value> Data;
+	std::map<std::string, Value> Data;
 
 	bool ReadFile(void);
-	void SkipNoneCommand(char**, int);
-	bool GetNextWord(char**, char**);
-	bool GetNextWord(char**, int*);
+	void SkipNoneCommand(char**, int) const;
+	void GetNextWord(char**, char**) const;
+	void GetNextWord(char**, Value*) const;
 	void StoreFile(void);
+	void StoreToMap(char**, Value*);
 };
 

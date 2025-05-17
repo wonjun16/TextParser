@@ -22,7 +22,7 @@ bool CParser::LoadFile(const char* fileName)
 	return true;
 }
 
-bool CParser::GetValue(const char* key, Value* value) const
+bool CParser::GetValue(std::string key, Value* value) const
 {
 	auto it = Data.find(key);
 	if (it == Data.end()) return false;
@@ -52,7 +52,7 @@ bool CParser::ReadFile(void)
 	return true;
 }
 
-void CParser::SkipNoneCommand(char** cBuffer, int mode)
+void CParser::SkipNoneCommand(char** cBuffer, int mode) const
 {
 	if (mode == 0)
 	{
@@ -66,49 +66,113 @@ void CParser::SkipNoneCommand(char** cBuffer, int mode)
 	}
 }
 
-bool CParser::GetNextWord(char**, char**)
+void CParser::GetNextWord(char** _cBuffer, char** _key) const
 {
-	return false;
+	char* start = *_cBuffer;
+	long long _size;
+	while (1)
+	{
+		if (**_cBuffer == ',' || **_cBuffer == 0x20 || **_cBuffer == '"' ||
+			**_cBuffer == 0x08 || **_cBuffer == 0x09 || **_cBuffer == 0x0a || **_cBuffer == 0x00 ||
+			**_cBuffer == 0x0d || **_cBuffer == '{' || **_cBuffer == '}' || **_cBuffer == '=') break;
+		(*_cBuffer)++;
+	}
+	_size = (long long)*_cBuffer - (long long)start;
+
+	*_key = (char*)malloc(_size + 1);
+	 memcpy_s(*_key, _size + 1, start, _size);
+	 if (*_key) (*_key)[_size] = '\0';
 }
 
-bool CParser::GetNextWord(char**, int*)
+void CParser::GetNextWord(char** _cBuffer, Value* _value) const
 {
-	return false;
+	char* start = *_cBuffer;
+	long long _size;
+	if (**_cBuffer == '"')
+	{
+		_value->type = Value::TYPE::STRING;
+
+		(*_cBuffer)++;
+		while (**_cBuffer != '"') (*_cBuffer)++;
+
+		_size = (long long)*_cBuffer - (long long)start;
+		_value->s = (char*)malloc(_size);
+		memcpy_s(_value->s, _size, start + 1, _size - 1);
+		if(_value->s) _value->s[_size - 1] = '\0';
+
+		(*_cBuffer)++;
+	}
+	else
+	{
+		_value->type = Value::TYPE::INT;
+
+		while (1)
+		{
+			if (**_cBuffer == ',' || **_cBuffer == 0x20 || **_cBuffer == '"' ||
+				**_cBuffer == 0x08 || **_cBuffer == 0x09 || **_cBuffer == 0x0a || **_cBuffer == 0x00 ||
+				**_cBuffer == 0x0d || **_cBuffer == '{' || **_cBuffer == '}' || **_cBuffer == '=') break;
+			(*_cBuffer)++;
+		}
+
+		_size = (long long)*_cBuffer - (long long)start;
+
+		char* iValue = (char*)malloc(_size + 1);
+		memcpy_s(iValue, _size + 1, start, _size);
+		if (iValue)
+		{
+			iValue[_size] = '\0';
+			_value->i = atoi(iValue);
+		}
+	}
 }
 
 void CParser::StoreFile(void)
 {
 	char* cBuffer = FileBuffer;
 
+	bool isValue = 0;
+
+	char* key;
+	Value value;
+
 	while (*cBuffer)
 	{
-		char* key;
-		Value value;
-
-		//불필요 문자 건너 뜀
-		while (*cBuffer == ',' || *cBuffer == '"' || *cBuffer == 0x20 ||
+		if (*cBuffer == ',' || *cBuffer == 0x20 ||
 			*cBuffer == 0x08 || *cBuffer == 0x09 || *cBuffer == 0x0a ||
 			*cBuffer == 0x0d || *cBuffer == '{' || *cBuffer == '}')
 		{
 			cBuffer++;
 		}
-
-		//주석처리
-		if (*cBuffer == '/' && *(cBuffer + 1) == '/')
+		else if (*cBuffer == '/' && *(cBuffer + 1) == '/')
 		{
 			SkipNoneCommand(&cBuffer, 0);
 		}
-		if (*cBuffer == '/' && *(cBuffer + 1) == '*')
+		else if (*cBuffer == '/' && *(cBuffer + 1) == '*')
 		{
 			SkipNoneCommand(&cBuffer, 1);
 		}
-
-		GetNextWord(&cBuffer, &key);
-		//단어 단위 가져와서 key혹은 value에 저장
-		if (*cBuffer == '=')
+		else if (*cBuffer == '=')
 		{
-
+			isValue = 1;
+			cBuffer++;
 		}
-		cBuffer++;
+		else
+		{
+			if (isValue)
+			{
+				GetNextWord(&cBuffer, &value);
+				StoreToMap(&key, &value);
+				isValue = 0;
+			}
+			else
+			{
+				GetNextWord(&cBuffer, &key);
+			}
+		}
 	}
+}
+
+void CParser::StoreToMap(char** _key, Value* _value)
+{
+	Data[*_key] = *_value;
 }
